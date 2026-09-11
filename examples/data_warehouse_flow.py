@@ -60,19 +60,26 @@ def main() -> None:
 
     try:
         # 1. Discover available sources and destinations
+        #    The response wraps everything in a "data" envelope, so the typed
+        #    attributes are Unset and the actual payload lives in
+        #    additional_properties["data"].
         print("\n--- Available Sources & Destinations ---")
         available = client.transfers.list_available_sources(team_id=team_id)
-        print(f"Data sources: {len(available.data_sources)}")
-        for ds in available.data_sources[:5]:
-            print(f"  {ds.id}: {ds.name}")
-        if len(available.data_sources) > 5:
-            print(f"  ... and {len(available.data_sources) - 5} more")
+        avail_data = available.additional_properties.get("data", {})
+        sources = avail_data.get("data_sources", [])
+        dests = avail_data.get("destinations", [])
 
-        print(f"Destinations: {len(available.destinations)}")
-        for dest in available.destinations[:5]:
-            print(f"  {dest.id}: {dest.display_name} ({dest.type_})")
-        if len(available.destinations) > 5:
-            print(f"  ... and {len(available.destinations) - 5} more")
+        print(f"Data sources: {len(sources)}")
+        for ds in sources[:5]:
+            print(f"  {ds['data_source_id']}: {ds['service_name']}")
+        if len(sources) > 5:
+            print(f"  ... and {len(sources) - 5} more")
+
+        print(f"Destinations: {len(dests)}")
+        for dest in dests[:5]:
+            print(f"  {dest['destination_id']}: {dest['destination_name']} ({dest['destination_type']})")
+        if len(dests) > 5:
+            print(f"  ... and {len(dests) - 5} more")
 
         # 2. Get configuration options for a source/destination pair
         print("\n--- Configuration Options ---")
@@ -84,8 +91,10 @@ def main() -> None:
             source_id=source_id,
             destination_id=dest_id,
         )
-        print(f"Schemas: {len(options.schemas)}")
-        for schema in options.schemas[:5]:
+        options_data = options.additional_properties.get("data", {})
+        schemas = options_data.get("schemas", [])
+        print(f"Schemas: {len(schemas)}")
+        for schema in schemas[:5]:
             print(f"  {schema}")
 
         # 3. Validate before creating
@@ -139,9 +148,10 @@ def main() -> None:
         print(f"Team has {len(transfers)} transfer(s)")
 
         config = client.transfers.get(team_id=team_id, transfer_id=transfer_id)
-        print(f"  Name: {config.display_name}")
-        print(f"  Source: {config.data_source_id}")
-        print(f"  Destination: {config.destination_id}")
+        config_data = config.additional_properties.get("data", {})
+        print(f"  Name: {config_data.get('display_name')}")
+        print(f"  Source: {config_data.get('data_source', {}).get('data_source_id')}")
+        print(f"  Destination: {config_data.get('destination_id')}")
 
         # 6. Pause and resume
         print("\n--- Pause / Resume ---")
