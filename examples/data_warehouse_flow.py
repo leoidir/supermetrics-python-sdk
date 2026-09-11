@@ -18,7 +18,7 @@ Setup:
 import argparse
 import os
 import traceback
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from getpass import getpass
 
 from dotenv import load_dotenv
@@ -153,8 +153,9 @@ def main() -> None:
 
         # 7. List recent runs
         #    A freshly created transfer may not have runs yet.
+        #    The API requires timezone-aware datetimes without microseconds.
         print("\n--- Transfer Runs ---")
-        now = datetime.now()
+        now = datetime.now(UTC).replace(microsecond=0)
         runs = client.transfers.list_runs(
             team_id=team_id,
             transfer_id=transfer_id,
