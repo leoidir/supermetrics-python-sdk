@@ -156,10 +156,12 @@ def main() -> None:
         # 6. Pause and resume
         print("\n--- Pause / Resume ---")
         paused = client.transfers.set_state(team_id=team_id, transfer_id=transfer_id, state="pause")
-        print(f"Paused: state={paused.state}")
+        paused_state = paused.additional_properties.get("data", {}).get("state")
+        print(f"Paused: state={paused_state}")
 
         resumed = client.transfers.set_state(team_id=team_id, transfer_id=transfer_id, state="unpause")
-        print(f"Resumed: state={resumed.state}")
+        resumed_state = resumed.additional_properties.get("data", {}).get("state")
+        print(f"Resumed: state={resumed_state}")
 
         # 7. List recent runs
         #    A freshly created transfer may not have runs yet.
