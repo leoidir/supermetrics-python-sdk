@@ -153,38 +153,8 @@ def main() -> None:
         print(f"  Source: {config_data.get('data_source', {}).get('data_source_id')}")
         print(f"  Destination: {config_data.get('destination_id')}")
 
-        # 6. Pause and resume
-        print("\n--- Pause / Resume ---")
-        paused = client.transfers.set_state(team_id=team_id, transfer_id=transfer_id, state="pause")
-        paused_state = paused.additional_properties.get("data", {}).get("state")
-        print(f"Paused: state={paused_state}")
-
-        resumed = client.transfers.set_state(team_id=team_id, transfer_id=transfer_id, state="unpause")
-        resumed_state = resumed.additional_properties.get("data", {}).get("state")
-        print(f"Resumed: state={resumed_state}")
-
-        # 7. List recent runs
-        #    A freshly created transfer may not have runs yet.
-        #    The API requires timezone-aware datetimes without microseconds.
-        print("\n--- Transfer Runs ---")
-        now = datetime.now(UTC).replace(microsecond=0)
-        runs = client.transfers.list_runs(
-            team_id=team_id,
-            transfer_id=transfer_id,
-            start_date=now - timedelta(days=7),
-            end_date=now,
-        )
-        print(f"Runs in the last 7 days: {len(runs)}")
-        for run in runs[:5]:
-            print(f"  {run.id}: {run.status}")
-
-        # If there are runs, inspect the most recent one
-        if runs:
-            run_detail = client.transfer_runs.get(team_id=team_id, transfer_run_id=runs[0].id)
-            print(f"  Latest run status: {run_detail.status}")
-            print(f"  Rows: {run_detail.total_rows}")
-
-        # 8. Create a backfill
+        # 6. Create a backfill
+        #    Must happen before pausing -- the API rejects backfills on paused transfers.
         print("\n--- Backfill ---")
         do_backfill = input("Create a test backfill? (y/N): ").strip().lower()
         if do_backfill == "y":
@@ -210,6 +180,36 @@ def main() -> None:
             if cancel == "y":
                 cancelled = client.backfills.cancel(team_id=team_id, backfill_id=backfill.transfer_backfill_id)
                 print(f"  Backfill cancelled: {cancelled.status}")
+
+        # 7. List recent runs
+        #    A freshly created transfer may not have runs yet.
+        #    The API requires timezone-aware datetimes without microseconds.
+        print("\n--- Transfer Runs ---")
+        now = datetime.now(UTC).replace(microsecond=0)
+        runs = client.transfers.list_runs(
+            team_id=team_id,
+            transfer_id=transfer_id,
+            start_date=now - timedelta(days=7),
+            end_date=now,
+        )
+        print(f"Runs in the last 7 days: {len(runs)}")
+        for run in runs[:5]:
+            print(f"  {run.id}: {run.status}")
+
+        if runs:
+            run_detail = client.transfer_runs.get(team_id=team_id, transfer_run_id=runs[0].id)
+            print(f"  Latest run status: {run_detail.status}")
+            print(f"  Rows: {run_detail.total_rows}")
+
+        # 8. Pause and resume
+        print("\n--- Pause / Resume ---")
+        paused = client.transfers.set_state(team_id=team_id, transfer_id=transfer_id, state="pause")
+        paused_state = paused.additional_properties.get("data", {}).get("state")
+        print(f"Paused: state={paused_state}")
+
+        resumed = client.transfers.set_state(team_id=team_id, transfer_id=transfer_id, state="unpause")
+        resumed_state = resumed.additional_properties.get("data", {}).get("state")
+        print(f"Resumed: state={resumed_state}")
 
         # 9. Cleanup
         cleanup = input("\nDelete test transfer? (y/N): ").strip().lower()
